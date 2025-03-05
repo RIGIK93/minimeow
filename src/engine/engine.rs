@@ -2,7 +2,7 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color, MoveGen};
 
-use super::{evaluation::{default_eval, LARGE_EVAL, SMALL_EVAL}, minimax::{maxi, mini}, move_tree::MoveTree};
+use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, minimax::{maxi, mini}, move_tree::MoveTree};
 
 pub struct Engine {
     pub depth: u8,
@@ -20,12 +20,12 @@ impl Engine {
         }
     }
 
-    fn get_options() {
+    pub fn get_options() {
         todo!()
     }
 
     // TODO
-    fn set_option() {
+    pub fn set_option() {
         todo!()
     }
 
@@ -45,9 +45,9 @@ impl Engine {
             Color::White => {
                 let mut best_eval = SMALL_EVAL;
                 for mv in moves {
-                    let mut tree: MoveTree = MoveTree::new(mv, default_eval, pos);
+                    let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
 
-                    let current_eval = maxi(&mut tree, depth);
+                    let current_eval = mini(&mut tree, depth);
                     if current_eval > best_eval {
                         best_eval = current_eval;
                         best = mv;
@@ -60,9 +60,9 @@ impl Engine {
             Color::Black => {
                 let mut best_eval = LARGE_EVAL;
                 for mv in moves {
-                    let mut tree: MoveTree = MoveTree::new(mv, default_eval, pos);
+                    let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
 
-                    let current_eval = mini(&mut tree, depth);
+                    let current_eval = maxi(&mut tree, depth);
                     if current_eval < best_eval {
                         best_eval = current_eval;
                         best = mv;
@@ -93,7 +93,16 @@ impl Engine {
     pub fn stop(&self) -> ChessMove {
         // could use try_recv when iterative deepening is implemented
 
-        // self.bv
         self.rx.as_ref().unwrap().recv().unwrap()
     }
+}
+
+
+#[test]
+fn engine_test() {
+    let mut eng = Engine::new(3);
+
+    eng.start(Board::default());
+
+    eng.stop();
 }

@@ -1,6 +1,3 @@
-use std::{borrow::Cow, collections::VecDeque, io, str::FromStr, sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}};
-use chess::{Board, BoardStatus, ChessMove, Color, Game, MoveGen, Piece, Square};
-use engine::Engine;
 
 pub mod evaluation;
 pub mod engine;
@@ -8,7 +5,6 @@ pub mod print_board;
 pub mod minimax;
 pub mod move_tree;
 pub mod uci;
-
 
 // const DEPTH: u8 = 7;
 

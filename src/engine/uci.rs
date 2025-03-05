@@ -9,12 +9,12 @@ pub fn uci_set_position(game: &mut Game, args: &mut VecDeque<&str>) {
 
     let mut fen = String::new();
     let mut moves: Vec<ChessMove> = Vec::new();
-    let mut moves_started = false; // becomes true when "args" reach "move" word
+    // let mut moves_started = false; // becomes true when "args" reach "move" word
 
     loop {
         if let Some(fen_piece) = args.pop_front() {
             if fen_piece == "moves" {
-                moves_started = true;
+                // moves_started = true;
                 break;
             }
 

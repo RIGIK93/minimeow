@@ -52,3 +52,19 @@ impl MoveTree {
         return (self.eval_func)(&self.board)
     }
 }
+
+#[test]
+fn tree_gen_test() {
+    use crate::engine::{evaluation::material_eval, print_board::print_board};
+
+    let board = Board::default();
+    let mv = MoveGen::new_legal(&board).last().unwrap();
+    let tree = MoveTree::new(mv, material_eval, &board);
+    let children = tree.gen_children();
+    print_board(&tree.board);
+    for c in &children {
+        print_board(&c.board);
+    }
+    println!("{}", children.len());
+    assert_eq!(children.len(), 20);
+}

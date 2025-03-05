@@ -8,7 +8,7 @@ pub const SMALL_EVAL: f64 = -LARGE_EVAL;
 /// The default eval just counts material
 /// TODO: The function will be renamed into material_count, due to its 
 /// replacement with a more sophisticated evaluation function
-pub fn default_eval(b: &Board) -> f64 {
+pub fn material_eval(b: &Board) -> f64 {
     let mut sq = Square::A1;
     let mut eval: f64 = 0.0;
 
