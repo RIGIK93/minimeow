@@ -1,1 +1,1 @@
-cargo run --bin eret < ./ERET.epd
+cargo run --release --bin eret < ./ERET.epd

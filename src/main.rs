@@ -51,13 +51,13 @@ fn tree_gen_test() {
     let board = Board::default();
     let mv = MoveGen::new_legal(&board).last().unwrap();
     let mut tree = MoveTree::new(mv, default_eval, &board);
-    tree.gen_new_children();
+    let children = tree.gen_children();
     print_board(&tree.board);
-    for c in &tree.children {
+    for c in &children {
         print_board(&c.board);
     }
-    println!("{}", tree.children.len());
-    assert_eq!(tree.children.len(), 20);
+    println!("{}", children.len());
+    assert_eq!(children.len(), 20);
 }
 
 #[test]
@@ -72,11 +72,11 @@ fn basic_queen_taking_test() {
     // b8d6
     let moves = vec![ChessMove::from_str("f5b5").unwrap(), ChessMove::from_str("b8d6").unwrap()];
     for mv in moves {
-        let mut tree = MoveTree::new(mv, default_eval, &board);
-        let tmp = maxi(&mut tree, 3);
+        let tree = MoveTree::new(mv, default_eval, &board);
+        let tmp = maxi(&tree, 3);
 
         println!("{}: {}", mv.to_string(), tmp);
-        write_tree(&tree, File::create(&mv.to_string()).unwrap()).unwrap();
+        // write_tree(&tree, File::create(&mv.to_string()).unwrap()).unwrap();
 
         if tmp > best {
             best = tmp;

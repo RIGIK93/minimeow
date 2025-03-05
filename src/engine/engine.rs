@@ -1,4 +1,4 @@
-use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}};
+use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instant};
 
 use chess::{Board, ChessMove, Color, MoveGen};
 
@@ -38,6 +38,9 @@ impl Engine {
 
         let mut best = ChessMove::default();
 
+        let mut node_count = 0;
+        let calc_start = Instant::now();
+
         match pos.side_to_move() {
             Color::White => {
                 let mut best_eval = SMALL_EVAL;
@@ -49,6 +52,8 @@ impl Engine {
                         best_eval = current_eval;
                         best = mv;
                     }
+
+                    node_count += tree.get_node_count();
                 }
             }
 
@@ -62,9 +67,13 @@ impl Engine {
                         best_eval = current_eval;
                         best = mv;
                     }
+
+                    node_count += tree.get_node_count();
                 }
             }
         }
+
+        println!("info nodes {} nps {} time {} pv {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), best.to_string());
 
         Some(best)
     }
