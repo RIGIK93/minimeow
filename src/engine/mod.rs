@@ -5,6 +5,7 @@ pub mod print_board;
 pub mod minimax;
 pub mod move_tree;
 pub mod uci;
+pub mod alphabeta;
 
 // const DEPTH: u8 = 7;
 

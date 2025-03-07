@@ -1,7 +1,7 @@
 use chess::BoardStatus;
-
 use super::{evaluation::{LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
+#[allow(dead_code)]
 pub fn minimax(tree: &MoveTree, depth: u8) -> f64 {
     match tree.board.side_to_move() {
         chess::Color::White => maxi(tree, depth),

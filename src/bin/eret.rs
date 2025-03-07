@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error, io, process, str::FromStr, time::Instant};
+use std::{collections::VecDeque, error::Error, io, str::FromStr, time::Instant};
 
 use chess::{Board, ChessMove};
 use chess_rust::engine::engine::Engine;
@@ -60,7 +60,7 @@ fn main() {
 
     let test_positions = puzzlify_epd().unwrap();
 
-    let mut engine = Engine::new(2);
+    let mut engine = Engine::new(5);
 
     let mut solved = 0;
     let start_time = Instant::now();

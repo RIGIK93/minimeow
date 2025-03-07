@@ -1,81 +1,145 @@
-pub fn alphabeta(e: EvalFunc, board: &Board, mut a: f64, b: f64, depth: u8) -> f64 {
+// pub fn alphabeta(e: EvalFunc, board: &Board, mut a: f64, b: f64, depth: u8) -> f64 {
 
-    if board.status() != BoardStatus::Ongoing {
-        if board.status() == BoardStatus::Stalemate {
-            return 0.0;
-        }
+//     if board.status() != BoardStatus::Ongoing {
+//         if board.status() == BoardStatus::Stalemate {
+//             return 0.0;
+//         }
 
-        // handle checkmate
-        return match board.side_to_move() {
-            Color::White => SMALL_EVAL, // Black Mated
-            Color::Black => LARGE_EVAL // White Mated
-        }
-    }
+//         // handle checkmate
+//         return match board.side_to_move() {
+//             Color::White => SMALL_EVAL, // Black Mated
+//             Color::Black => LARGE_EVAL // White Mated
+//         }
+//     }
 
-    if depth == 0 {
-        return e(&board);
-    } // Replace with quiesce search for horizon effect mitigation
+//     if depth == 0 {
+//         return e(&board);
+//     } // Replace with quiesce search for horizon effect mitigation
 
-    let mut best = SMALL_EVAL;
-    for mv in MoveGen::new_legal(board) {
-        // println!("{}", mv);
-        let board: Board = board.make_move_new(mv);
-        // print_board(&board); // Debug
-        let score: f64 = -alphabeta(e, &board, -b, -a, depth - 1);
+//     let mut best = SMALL_EVAL;
+//     for mv in MoveGen::new_legal(board) {
+//         // println!("{}", mv);
+//         let board: Board = board.make_move_new(mv);
+//         // print_board(&board); // Debug
+//         let score: f64 = -alphabeta(e, &board, -b, -a, depth - 1);
 
-        if score > best {
-            best = score;
-            if score > a {
-                a = score; // alpha acts like max in MiniMax
-            }
-        }
-        if score >= b {
-            return best; //  fail soft beta-cutoff, existing the loop here is also fine
-        }
-    }
+//         if score > best {
+//             best = score;
+//             if score > a {
+//                 a = score; // alpha acts like max in MiniMax
+//             }
+//         }
+//         if score >= b {
+//             return best; //  fail soft beta-cutoff, existing the loop here is also fine
+//         }
+//     }
 
-    return best;
+//     return best;
+// }
+
+use chess::BoardStatus;
+
+use super::{
+    evaluation::{LARGE_EVAL, SMALL_EVAL},
+    move_tree::MoveTree,
+};
+
+#[allow(dead_code)]
+pub fn alphabeta(tree: &MoveTree, depth: u8) -> f64 {
+   match tree.board.side_to_move() {
+       chess::Color::White => alpha_beta_max(tree, SMALL_EVAL, LARGE_EVAL, depth),
+       chess::Color::Black => alpha_beta_min(tree, SMALL_EVAL, LARGE_EVAL, depth)
+   }
 }
 
 // alpha < beta
-pub fn alphaBetaMax(evaluate: EvalFunc, board: &Board, mut alpha: f64, beta: f64, depthleft: u8) -> f64 {
-    if depthleft == 0 || (board.status() != BoardStatus::Ongoing) {
-        return evaluate(board);
+pub fn alpha_beta_max(tree: &MoveTree, mut lower: f64, upper: f64, depth: u8) -> f64 {
+    if depth == 0 {
+        return tree.eval();
     }
 
-    let mut bestValue = SMALL_EVAL;
-    for mv in MoveGen::new_legal(board) {
-       let score = alphaBetaMin(evaluate, &board.make_move_new(mv), alpha, beta, depthleft - 1);
-       if score > bestValue {
-          bestValue = alpha;
-          if score > alpha {
-             alpha = score; // alpha acts like max in MiniMax
-          }
-       }
-       if score >= beta {
-          return score;   // fail soft beta-cutoff
-       }
-    }
-    return bestValue;
- }
+    let mut max = SMALL_EVAL;
+    let children = tree.gen_children();
 
-pub fn alphaBetaMin(evaluate: EvalFunc, board: &Board, alpha: f64, mut beta: f64, depthleft: u8) -> f64 {
-    if depthleft == 0 || (board.status() != BoardStatus::Ongoing) {
-        return -evaluate(board);
+    // Mate detection
+    if children.len() == 0 {
+        match tree.board.status() {
+            BoardStatus::Checkmate => return SMALL_EVAL,
+            BoardStatus::Stalemate => return 0.0,
+            BoardStatus::Ongoing => unreachable!(),
+        }
     }
 
-    let mut bestValue = LARGE_EVAL;
-    for mv in MoveGen::new_legal(board) {
-       let score = alphaBetaMax(evaluate, &board.make_move_new(mv), alpha, beta, depthleft - 1 );
-       if score < bestValue {
-          bestValue = score;
-          if score < beta {
-             beta = score; // beta acts like min in MiniMax
-          }
-       }
-       if score <= alpha {
-          return score; // fail soft alpha-cutoff, break can also be used here
-       }
+    for child in children {
+        let score = alpha_beta_min(&child, lower, upper, depth - 1);
+
+        if score > max {
+            max = score;
+            if score > lower {
+                lower = score;
+            }
+        }
+
+        if score >= upper {
+            return score; // fail soft beta-cutoff
+        }
     }
-    return bestValue;
+
+    return max;
+}
+
+pub fn alpha_beta_min(tree: &MoveTree, lower: f64, mut upper: f64, depth: u8) -> f64 {
+    if depth == 0 || (tree.board.status() != BoardStatus::Ongoing) {
+        return -tree.eval();
+    }
+
+    let mut min = LARGE_EVAL;
+    let children = tree.gen_children();
+
+    // Mate detection
+    if children.len() == 0 {
+        match tree.board.status() {
+            BoardStatus::Checkmate => return LARGE_EVAL,
+            BoardStatus::Stalemate => return 0.0,
+            BoardStatus::Ongoing => unreachable!(),
+        }
+    }
+
+    for child in children {
+        let score = alpha_beta_max(&child, lower, upper, depth - 1);
+        if score < min {
+            min = score;
+            if score < upper {
+                upper = score;
+            }
+        }
+
+        if score <= lower {
+            return score; // fail soft alpha-cutoff, break can also be used here
+        }
+    }
+
+    return min;
+}
+
+// A great video of visual alphabeta procedure: https://www.youtube.com/watch?v=l-hh51ncgDI
+// Code taken from: https://www.chessprogramming.org/Alpha-Beta#Max_versus_Min
+
+#[test]
+fn mate_in_three() {
+    use std::str::FromStr;
+    use chess::{Board, ChessMove};
+    use crate::engine::{evaluation::material_eval, print_board::print_board};
+
+    let board: Board = Board::from_str("1B2k3/8/3q4/5Q2/8/8/4K3/8 w - - 0 1").unwrap();
+    print_board(&board);
+
+    let tree = MoveTree::new(ChessMove::from_str("b8d6").unwrap(), material_eval, &board);
+    // let eval = mini(&tree, 5);
+    let eval = alphabeta(&tree, 5);
+
+
+    println!("----------");
+    print_board(&board.make_move_new(ChessMove::from_str("b8d6").unwrap()));
+    assert!(eval > 3.0);
 }

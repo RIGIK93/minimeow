@@ -2,7 +2,9 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color, MoveGen};
 
-use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, minimax::{maxi, mini}, move_tree::MoveTree};
+use crate::engine::alphabeta::{alpha_beta_max, alpha_beta_min};
+
+use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
 pub struct Engine {
     pub depth: u8,
@@ -20,14 +22,14 @@ impl Engine {
         }
     }
 
-    pub fn get_options() {
-        todo!()
-    }
+    // pub fn get_options() {
+    //     todo!()
+    // }
 
     // TODO
-    pub fn set_option() {
-        todo!()
-    }
+    // pub fn set_option() {
+    //     todo!()
+    // }
 
     pub fn calculate(pos: &Board, depth: u8) -> Option<ChessMove> {
         let moves: Vec<ChessMove> = MoveGen::new_legal(pos).collect();
@@ -47,7 +49,7 @@ impl Engine {
                 for mv in moves {
                     let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
 
-                    let current_eval = mini(&mut tree, depth);
+                    let current_eval = alpha_beta_min(&mut tree, SMALL_EVAL, LARGE_EVAL, depth);
                     if current_eval > best_eval {
                         best_eval = current_eval;
                         best = mv;
@@ -62,7 +64,7 @@ impl Engine {
                 for mv in moves {
                     let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
 
-                    let current_eval = maxi(&mut tree, depth);
+                    let current_eval = alpha_beta_max(&mut tree, SMALL_EVAL, LARGE_EVAL, depth);
                     if current_eval < best_eval {
                         best_eval = current_eval;
                         best = mv;
