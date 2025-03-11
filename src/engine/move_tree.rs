@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use chess::{Board, ChessMove, MoveGen};
 
-use super::evaluation::EvalFunc;
+use super::evaluation::{EvalFunc, CP};
 
 #[derive(Clone)]
 pub struct MoveTree {
@@ -48,7 +48,7 @@ impl MoveTree {
         .collect()
     }
 
-    pub fn eval(&self) -> f64 {
+    pub fn eval(&self) -> CP {
         return (self.eval_func)(&self.board)
     }
 }

@@ -1,15 +1,15 @@
 use chess::BoardStatus;
-use super::{evaluation::{LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
+use super::{evaluation::{CP, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
 #[allow(dead_code)]
-pub fn minimax(tree: &MoveTree, depth: u8) -> f64 {
+pub fn minimax(tree: &MoveTree, depth: u8) -> CP {
     match tree.board.side_to_move() {
         chess::Color::White => maxi(tree, depth),
         chess::Color::Black => mini(tree, depth)
     }
 }
 
-pub fn maxi(tree: &MoveTree, depth: u8) -> f64 {
+pub fn maxi(tree: &MoveTree, depth: u8) -> CP {
 
     if depth == 0 {
         return tree.eval();
@@ -24,7 +24,7 @@ pub fn maxi(tree: &MoveTree, depth: u8) -> f64 {
         }
 
         if tree.board.status() == BoardStatus::Stalemate {
-            return 0.0;
+            return 0;
         }
     }
 
@@ -38,7 +38,7 @@ pub fn maxi(tree: &MoveTree, depth: u8) -> f64 {
     return max;
 }
 
-pub fn mini(tree: &MoveTree, depth: u8) -> f64 {
+pub fn mini(tree: &MoveTree, depth: u8) -> CP {
 
     if depth == 0 {
         return tree.eval();
@@ -54,7 +54,7 @@ pub fn mini(tree: &MoveTree, depth: u8) -> f64 {
             }
     
             if tree.board.status() == BoardStatus::Stalemate {
-                return 0.0;
+                return 0;
             }
         }
     }

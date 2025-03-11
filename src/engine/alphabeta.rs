@@ -40,12 +40,12 @@
 use chess::BoardStatus;
 
 use super::{
-    evaluation::{LARGE_EVAL, SMALL_EVAL},
+    evaluation::{CP, LARGE_EVAL, SMALL_EVAL},
     move_tree::MoveTree,
 };
 
 #[allow(dead_code)]
-pub fn alphabeta(tree: &MoveTree, depth: u8) -> f64 {
+pub fn alphabeta(tree: &MoveTree, depth: u8) -> CP {
    match tree.board.side_to_move() {
        chess::Color::White => alpha_beta_max(tree, SMALL_EVAL, LARGE_EVAL, depth),
        chess::Color::Black => alpha_beta_min(tree, SMALL_EVAL, LARGE_EVAL, depth)
@@ -53,7 +53,7 @@ pub fn alphabeta(tree: &MoveTree, depth: u8) -> f64 {
 }
 
 // alpha < beta
-pub fn alpha_beta_max(tree: &MoveTree, mut lower: f64, upper: f64, depth: u8) -> f64 {
+pub fn alpha_beta_max(tree: &MoveTree, mut lower: CP, upper: CP, depth: u8) -> CP {
     if depth == 0 {
         return tree.eval();
     }
@@ -65,7 +65,7 @@ pub fn alpha_beta_max(tree: &MoveTree, mut lower: f64, upper: f64, depth: u8) ->
     if children.len() == 0 {
         match tree.board.status() {
             BoardStatus::Checkmate => return SMALL_EVAL,
-            BoardStatus::Stalemate => return 0.0,
+            BoardStatus::Stalemate => return 0,
             BoardStatus::Ongoing => unreachable!(),
         }
     }
@@ -88,9 +88,9 @@ pub fn alpha_beta_max(tree: &MoveTree, mut lower: f64, upper: f64, depth: u8) ->
     return max;
 }
 
-pub fn alpha_beta_min(tree: &MoveTree, lower: f64, mut upper: f64, depth: u8) -> f64 {
-    if depth == 0 || (tree.board.status() != BoardStatus::Ongoing) {
-        return -tree.eval();
+pub fn alpha_beta_min(tree: &MoveTree, lower: CP, mut upper: CP, depth: u8) -> CP {
+    if depth == 0 {
+        return tree.eval();
     }
 
     let mut min = LARGE_EVAL;
@@ -100,7 +100,7 @@ pub fn alpha_beta_min(tree: &MoveTree, lower: f64, mut upper: f64, depth: u8) ->
     if children.len() == 0 {
         match tree.board.status() {
             BoardStatus::Checkmate => return LARGE_EVAL,
-            BoardStatus::Stalemate => return 0.0,
+            BoardStatus::Stalemate => return 0,
             BoardStatus::Ongoing => unreachable!(),
         }
     }
@@ -141,5 +141,5 @@ fn mate_in_three() {
 
     println!("----------");
     print_board(&board.make_move_new(ChessMove::from_str("b8d6").unwrap()));
-    assert!(eval > 3.0);
+    assert!(eval > 30);
 }

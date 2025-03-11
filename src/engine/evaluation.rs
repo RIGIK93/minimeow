@@ -1,26 +1,29 @@
 use chess::{Board, Color, Piece, Square};
 
-pub type EvalFunc = fn(&Board) -> f64;
+pub type EvalFunc = fn(&Board) -> CP;
 
-pub const LARGE_EVAL: f64 = 1000000000 as f64;
-pub const SMALL_EVAL: f64 = -LARGE_EVAL;
+/// Centipawns
+pub type CP = i16;
+
+pub const LARGE_EVAL: CP = 1000;
+pub const SMALL_EVAL: CP = -LARGE_EVAL;
 
 /// The default eval just counts material
 /// TODO: The function will be renamed into material_count, due to its 
 /// replacement with a more sophisticated evaluation function
-pub fn material_eval(b: &Board) -> f64 {
+pub fn material_eval(b: &Board) -> CP {
     let mut sq = Square::A1;
-    let mut eval: f64 = 0.0;
+    let mut eval: CP = 0;
 
     loop {
         if let Some(p) = b.piece_on(sq) {
-            let tmp: f64 = match p {
-                Piece::Bishop => 3.0,
-                Piece::Knight => 3.0,
+            let tmp: CP = match p {
+                Piece::Bishop => 30,
+                Piece::Knight => 30,
                 Piece::King => LARGE_EVAL,
-                Piece::Pawn => 1.0,
-                Piece::Queen => 9.0,
-                Piece::Rook => 5.0,
+                Piece::Pawn => 10,
+                Piece::Queen => 90,
+                Piece::Rook => 50,
             };
 
             match b.color_on(sq).unwrap() {
