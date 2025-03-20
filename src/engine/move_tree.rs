@@ -6,7 +6,7 @@ use super::evaluation::{EvalFunc, CP};
 
 #[derive(Clone)]
 pub struct MoveTree {
-    // pub mv: ChessMove,
+    pub mv: ChessMove,
     // status: MoveTreeStatus,
     // depth: u8,
     node_count: Rc<RefCell<u64>>,
@@ -18,7 +18,7 @@ pub struct MoveTree {
 impl MoveTree {
     pub fn new(mv: ChessMove, eval_func: EvalFunc, board: &Board) -> Self {
         Self {
-            // mv,
+            mv,
             // depth: 0,
             eval_func: eval_func,
             // children: Vec::new(),
@@ -28,10 +28,19 @@ impl MoveTree {
         }
     }
 
+    pub fn safe_gen_child(&self, mv: ChessMove) -> Option<MoveTree> {
+        if self.board.legal(mv) { // very slow, optimize
+            return Some(self.gen_child(mv));
+        }
+
+        None
+    }
+
     fn gen_child(&self, mv: ChessMove) -> MoveTree {
         *self.node_count.borrow_mut() += 1;    
 
         Self {
+            mv: mv,
             eval_func: self.eval_func,
             board: self.board.make_move_new(mv),
             node_count: self.node_count.clone()

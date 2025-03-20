@@ -37,28 +37,61 @@
 //     return best;
 // }
 
-use chess::BoardStatus;
+use chess::{BoardStatus, ChessMove};
 
 use super::{
     evaluation::{CP, LARGE_EVAL, SMALL_EVAL},
-    move_tree::MoveTree,
+    move_tree::MoveTree, transposition_table::TranspositionTable, 
+    transposition_table::BoundType
 };
 
 #[allow(dead_code)]
-pub fn alphabeta(tree: &MoveTree, depth: u8) -> CP {
+pub fn alphabeta(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> CP {
    match tree.board.side_to_move() {
-       chess::Color::White => alpha_beta_max(tree, SMALL_EVAL, LARGE_EVAL, depth),
-       chess::Color::Black => alpha_beta_min(tree, SMALL_EVAL, LARGE_EVAL, depth)
+       chess::Color::White => alpha_beta_max(tree, tt, SMALL_EVAL, LARGE_EVAL, depth),
+       chess::Color::Black => alpha_beta_min(tree, tt, SMALL_EVAL, LARGE_EVAL, depth)
    }
 }
 
 // alpha < beta
-pub fn alpha_beta_max(tree: &MoveTree, mut lower: CP, upper: CP, depth: u8) -> CP {
+pub fn alpha_beta_max(tree: &MoveTree, tt: &mut TranspositionTable, mut lower: CP, upper: CP, depth: u8) -> CP {
+    let mut max = SMALL_EVAL;
+
+    if let Some(entry) = tt.get(&tree.board) {
+        if entry.depth > depth {
+            match entry.flag {
+                BoundType::Exact => {
+                    return entry.eval;
+                },
+                BoundType::ExceedsUpperBound => {
+                    if entry.eval > lower {
+                        lower = entry.eval;
+                    }
+
+                    if lower >= upper {
+                        return entry.eval;
+                    }
+
+                    // safe generation with a move legality needed in case of a hash collision
+                    // note, the docs say that the legality check is pretty slow, so
+                    // benchmarking is required
+                    if let Some(t) = &tree.safe_gen_child(entry.mv) {
+                        max = alpha_beta_min(t, tt, lower, upper, depth);
+
+                        if max >= upper {
+                            return max
+                        }
+                    }
+                }
+                BoundType::RecedesLowerBound => {/*hash collision */},
+            }
+        }
+    }
+
     if depth == 0 {
         return tree.eval();
     }
 
-    let mut max = SMALL_EVAL;
     let children = tree.gen_children();
 
     // Mate detection
@@ -70,30 +103,66 @@ pub fn alpha_beta_max(tree: &MoveTree, mut lower: CP, upper: CP, depth: u8) -> C
         }
     }
 
+    let mut pv= children[0].clone();
     for child in children {
-        let score = alpha_beta_min(&child, lower, upper, depth - 1);
+        let score = alpha_beta_min(&child, tt, lower, upper, depth - 1);
 
         if score > max {
             max = score;
+            pv = child;
             if score > lower {
                 lower = score;
             }
         }
 
         if score >= upper {
+            tt.set_if_deeper(&pv.board, depth, pv.mv, score, BoundType::ExceedsUpperBound);
             return score; // fail soft beta-cutoff
         }
     }
 
+    tt.set_if_deeper(&pv.board, depth, pv.mv, max, BoundType::Exact);
     return max;
 }
 
-pub fn alpha_beta_min(tree: &MoveTree, lower: CP, mut upper: CP, depth: u8) -> CP {
+pub fn alpha_beta_min(tree: &MoveTree, tt: &mut TranspositionTable, lower: CP, mut upper: CP, depth: u8) -> CP {
+    let mut min = LARGE_EVAL;
+
+    if let Some(entry) = tt.get(&tree.board) {
+        if entry.depth > depth {
+            match entry.flag {
+                BoundType::Exact => {
+                    return entry.eval;
+                },
+                BoundType::RecedesLowerBound => {
+                    if entry.eval < upper {
+                        upper = entry.eval;
+                    }
+
+                    if lower >= upper {
+                        return entry.eval;
+                    }
+
+                    // safe generation with a move legality needed in case of a hash collision
+                    // note, the docs say that the legality check is pretty slow, so
+                    // benchmarking is required
+                    if let Some(t) = &tree.safe_gen_child(entry.mv) {
+                        min = alpha_beta_min(t, tt, lower, upper, depth);
+
+                        if min <= lower {
+                            return min
+                        }
+                    }
+                }
+                BoundType::ExceedsUpperBound => {/*hash collision */}, // Collision
+            }
+        }
+    }
+
     if depth == 0 {
         return tree.eval();
     }
 
-    let mut min = LARGE_EVAL;
     let children = tree.gen_children();
 
     // Mate detection
@@ -105,20 +174,24 @@ pub fn alpha_beta_min(tree: &MoveTree, lower: CP, mut upper: CP, depth: u8) -> C
         }
     }
 
+    let mut pv= children[0].clone();
     for child in children {
-        let score = alpha_beta_max(&child, lower, upper, depth - 1);
+        let score = alpha_beta_max(&child, tt, lower, upper, depth - 1);
         if score < min {
             min = score;
+            pv = child;
             if score < upper {
                 upper = score;
             }
         }
 
         if score <= lower {
+            tt.set(&pv.board, depth, pv.mv, score, BoundType::RecedesLowerBound);
             return score; // fail soft alpha-cutoff, break can also be used here
         }
     }
 
+    tt.set(&pv.board, depth, pv.mv, min, BoundType::Exact);
     return min;
 }
 
@@ -135,11 +208,36 @@ fn mate_in_three() {
     print_board(&board);
 
     let tree = MoveTree::new(ChessMove::from_str("b8d6").unwrap(), material_eval, &board);
+    let mut tt = TranspositionTable::new();
     // let eval = mini(&tree, 5);
-    let eval = alphabeta(&tree, 5);
+    let eval = alphabeta(&tree, &mut tt, 5);
 
 
     println!("----------");
     print_board(&board.make_move_new(ChessMove::from_str("b8d6").unwrap()));
     assert!(eval > 30);
+}
+
+#[test]
+// ensures that the sign of evaluation does not alternate with depth
+fn sign_consistency() {
+    use std::str::FromStr;
+    use chess::{Board, ChessMove};
+    use crate::engine::{evaluation::material_eval, print_board::print_board};
+
+    let board: Board = Board::from_str("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w kq - 0 1").unwrap();
+
+    let tree = MoveTree::new(ChessMove::from_str("e2e4").unwrap(), material_eval, &board);
+
+    let mut tt = TranspositionTable::new();
+
+    let eval_odd = alphabeta(&tree, &mut tt, 5);
+
+    let tree = MoveTree::new(ChessMove::from_str("e2e4").unwrap(), material_eval, &board);
+
+    let mut tt = TranspositionTable::new();
+
+    let eval_even = alphabeta(&tree, &mut tt, 4);
+
+    assert_eq!(eval_even.signum(), eval_odd.signum());
 }

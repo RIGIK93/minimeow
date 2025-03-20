@@ -2,7 +2,7 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color, MoveGen};
 
-use crate::engine::alphabeta::{alpha_beta_max, alpha_beta_min};
+use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min}, evaluation::CP, transposition_table::TranspositionTable};
 
 use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
@@ -39,17 +39,19 @@ impl Engine {
         }
 
         let mut best = ChessMove::default();
+        let mut best_eval: CP;
 
         let mut node_count = 0;
         let calc_start = Instant::now();
 
         match pos.side_to_move() {
             Color::White => {
-                let mut best_eval = SMALL_EVAL;
+                best_eval = SMALL_EVAL;
                 for mv in moves {
                     let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
+                    let mut tt = TranspositionTable::new();
 
-                    let current_eval = alpha_beta_min(&mut tree, SMALL_EVAL, LARGE_EVAL, depth);
+                    let current_eval = alpha_beta_min(&mut tree, &mut tt, SMALL_EVAL, LARGE_EVAL, depth);
                     if current_eval > best_eval {
                         best_eval = current_eval;
                         best = mv;
@@ -60,11 +62,12 @@ impl Engine {
             }
 
             Color::Black => {
-                let mut best_eval = LARGE_EVAL;
+                best_eval = LARGE_EVAL;
                 for mv in moves {
                     let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
+                    let mut tt = TranspositionTable::new();
 
-                    let current_eval = alpha_beta_max(&mut tree, SMALL_EVAL, LARGE_EVAL, depth);
+                    let current_eval = alpha_beta_max(&mut tree, &mut tt, SMALL_EVAL, LARGE_EVAL, depth);
                     if current_eval < best_eval {
                         best_eval = current_eval;
                         best = mv;
@@ -75,7 +78,7 @@ impl Engine {
             }
         }
 
-        println!("info nodes {} nps {} time {} pv {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), best.to_string());
+        println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), best.to_string(), best_eval);
 
         Some(best)
     }

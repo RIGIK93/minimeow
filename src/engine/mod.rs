@@ -6,6 +6,7 @@ pub mod minimax;
 pub mod move_tree;
 pub mod uci;
 pub mod alphabeta;
+pub mod transposition_table;
 
 // const DEPTH: u8 = 7;
 

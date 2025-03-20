@@ -1,11 +1,11 @@
-use chess::{Board, Color, Piece, Square};
+use chess::{Board, ChessMove, Color, Piece, Square};
 
 pub type EvalFunc = fn(&Board) -> CP;
 
 /// Centipawns
 pub type CP = i16;
 
-pub const LARGE_EVAL: CP = 1000;
+pub const LARGE_EVAL: CP = 10000;
 pub const SMALL_EVAL: CP = -LARGE_EVAL;
 
 /// The default eval just counts material
@@ -14,16 +14,16 @@ pub const SMALL_EVAL: CP = -LARGE_EVAL;
 pub fn material_eval(b: &Board) -> CP {
     let mut sq = Square::A1;
     let mut eval: CP = 0;
-
+    
     loop {
         if let Some(p) = b.piece_on(sq) {
             let tmp: CP = match p {
-                Piece::Bishop => 30,
-                Piece::Knight => 30,
+                Piece::Bishop => 300,
+                Piece::Knight => 300,
                 Piece::King => LARGE_EVAL,
-                Piece::Pawn => 10,
-                Piece::Queen => 90,
-                Piece::Rook => 50,
+                Piece::Pawn => 100,
+                Piece::Queen => 900,
+                Piece::Rook => 500,
             };
 
             match b.color_on(sq).unwrap() {
@@ -44,3 +44,7 @@ pub fn material_eval(b: &Board) -> CP {
 
     eval
 }
+
+// pub fn mva_lvv() {
+
+// }
