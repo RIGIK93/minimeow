@@ -28,6 +28,18 @@ impl MoveTree {
         }
     }
 
+    pub fn new_root_node(eval_func: EvalFunc, board: Board) -> Self {
+        Self {
+            mv: ChessMove::default(),
+            // depth: 0,
+            eval_func: eval_func,
+            // children: Vec::new(),
+            board: board,
+            // status: Default::default()
+            node_count: Rc::new(RefCell::new(0 as u64))
+        }
+    }
+
     pub fn safe_gen_child(&self, mv: ChessMove) -> Option<MoveTree> {
         if self.board.legal(mv) { // very slow, optimize
             return Some(self.gen_child(mv));

@@ -37,7 +37,7 @@
 //     return best;
 // }
 
-use chess::{BoardStatus, ChessMove};
+use chess::BoardStatus;
 
 use super::{
     evaluation::{CP, LARGE_EVAL, SMALL_EVAL},
@@ -223,7 +223,7 @@ fn mate_in_three() {
 fn sign_consistency() {
     use std::str::FromStr;
     use chess::{Board, ChessMove};
-    use crate::engine::{evaluation::material_eval, print_board::print_board};
+    use crate::engine::evaluation::material_eval;
 
     let board: Board = Board::from_str("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w kq - 0 1").unwrap();
 

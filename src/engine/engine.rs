@@ -2,7 +2,7 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color, MoveGen};
 
-use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min}, evaluation::CP, transposition_table::TranspositionTable};
+use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min, alphabeta}, evaluation::CP, transposition_table::TranspositionTable};
 
 use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
@@ -31,56 +31,73 @@ impl Engine {
     //     todo!()
     // }
 
-    pub fn calculate(pos: &Board, depth: u8) -> Option<ChessMove> {
-        let moves: Vec<ChessMove> = MoveGen::new_legal(pos).collect();
+    fn best_move_max(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> (ChessMove, CP) {
+        let mut max = SMALL_EVAL;
+        let mut bm = ChessMove::default();
 
-        if moves.len() == 0 {
-            return None
-        }
+        let children = tree.gen_children();
 
-        let mut best = ChessMove::default();
-        let mut best_eval: CP;
-
-        let mut node_count = 0;
-        let calc_start = Instant::now();
-
-        match pos.side_to_move() {
-            Color::White => {
-                best_eval = SMALL_EVAL;
-                for mv in moves {
-                    let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
-                    let mut tt = TranspositionTable::new();
-
-                    let current_eval = alpha_beta_min(&mut tree, &mut tt, SMALL_EVAL, LARGE_EVAL, depth);
-                    if current_eval > best_eval {
-                        best_eval = current_eval;
-                        best = mv;
-                    }
-
-                    node_count += tree.get_node_count();
-                }
-            }
-
-            Color::Black => {
-                best_eval = LARGE_EVAL;
-                for mv in moves {
-                    let mut tree: MoveTree = MoveTree::new(mv, material_eval, pos);
-                    let mut tt = TranspositionTable::new();
-
-                    let current_eval = alpha_beta_max(&mut tree, &mut tt, SMALL_EVAL, LARGE_EVAL, depth);
-                    if current_eval < best_eval {
-                        best_eval = current_eval;
-                        best = mv;
-                    }
-
-                    node_count += tree.get_node_count();
-                }
+        let mut eval;
+        for t in children {
+            eval = alpha_beta_max(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
+            if eval >= max {
+                max = eval;
+                bm = t.mv;
             }
         }
 
-        println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), best.to_string(), best_eval);
+        (bm, max)
+    }
 
-        Some(best)
+    fn best_move_min(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> (ChessMove, CP) {
+        let mut min = LARGE_EVAL;
+        let mut bm = ChessMove::default();
+
+        let children = tree.gen_children();
+
+        let mut eval;
+        for t in children {
+            eval = alpha_beta_min(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
+            if eval <= min {
+                min = eval;
+                bm = t.mv;
+            }
+        }
+
+        (bm, min)
+    }
+
+    fn best_move(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> (ChessMove, CP) {
+        match tree.board.side_to_move() {
+            Color::White => Self::best_move_max(tree, tt, depth),
+            Color::Black => Self::best_move_min(tree, tt, depth)
+        }
+    }
+
+    fn calculate(pos: &Board, depth: u8) -> Option<ChessMove> {
+        let mut tt = TranspositionTable::new();
+        let mut bm = ChessMove::default();
+        
+        for i in 1..depth {
+            let tree: MoveTree = MoveTree::new_root_node( material_eval, pos.clone());
+            let calc_start = Instant::now();
+
+            let (best, eval) = Self::best_move(&tree, &mut tt, i);
+            bm = best;
+
+            let node_count = tree.get_node_count();
+
+            println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), bm.to_string(), eval);
+        }
+
+        // if let Some(entry) = tt.get(pos) {
+        //     return Some(entry.mv)
+        // }
+        if bm != ChessMove::default() {
+            return Some(bm)
+        }
+
+        None
     }
 
     /// TODO: Thread intentionally panics, resolve smoother
@@ -98,7 +115,10 @@ impl Engine {
     pub fn stop(&self) -> ChessMove {
         // could use try_recv when iterative deepening is implemented
 
-        self.rx.as_ref().unwrap().recv().unwrap()
+        match self.rx.as_ref().unwrap().recv() {
+            Ok(mv) => return mv,
+            Err(e) => panic!("{}", e)
+        }
     }
 }
 

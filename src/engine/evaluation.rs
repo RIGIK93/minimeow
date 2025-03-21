@@ -1,4 +1,4 @@
-use chess::{Board, ChessMove, Color, Piece, Square};
+use chess::{Board, Color, Piece, Square};
 
 pub type EvalFunc = fn(&Board) -> CP;
 

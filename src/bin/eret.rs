@@ -60,7 +60,7 @@ fn main() {
 
     let test_positions = puzzlify_epd().unwrap();
 
-    let mut engine = Engine::new(5);
+    let mut engine = Engine::new(7);
 
     let mut solved = 0;
     let start_time = Instant::now();

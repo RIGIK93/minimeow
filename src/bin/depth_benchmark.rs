@@ -9,7 +9,7 @@ fn main() {
     let pos = pos.make_move_new(ChessMove::from_san(&pos, "e4").unwrap());
     let pos = pos.make_move_new(ChessMove::from_san(&pos, "e5").unwrap());
 
-    let mut depth = 1;
+    let mut depth = 2;
 
     let mut start_time = Instant::now();
 
