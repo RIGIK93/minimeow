@@ -11,7 +11,7 @@ fn main() -> io::Result<()> {
     let mut buffer = String::new();
 
     let mut game = Game::new();
-    let mut engine = Engine::new(3);
+    let mut engine = Engine::new(7);
 
     while buffer != "quit\n" {
         buffer = String::new();

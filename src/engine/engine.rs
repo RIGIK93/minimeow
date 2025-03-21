@@ -1,8 +1,8 @@
 use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instant};
 
-use chess::{Board, ChessMove, Color, MoveGen};
+use chess::{Board, ChessMove, Color};
 
-use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min, alphabeta}, evaluation::CP, transposition_table::TranspositionTable};
+use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min}, evaluation::CP, transposition_table::TranspositionTable};
 
 use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
@@ -39,7 +39,7 @@ impl Engine {
 
         let mut eval;
         for t in children {
-            eval = alpha_beta_max(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
+            eval = alpha_beta_min(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
             if eval >= max {
                 max = eval;
                 bm = t.mv;
@@ -57,7 +57,7 @@ impl Engine {
 
         let mut eval;
         for t in children {
-            eval = alpha_beta_min(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
+            eval = alpha_beta_max(&t, tt, SMALL_EVAL, LARGE_EVAL, depth - 1);
             if eval <= min {
                 min = eval;
                 bm = t.mv;
@@ -74,7 +74,7 @@ impl Engine {
         }
     }
 
-    fn calculate(pos: &Board, depth: u8) -> Option<ChessMove> {
+    fn calculate(tx: std::sync::mpsc::Sender<ChessMove>, pos: &Board, depth: u8) {
         let mut tt = TranspositionTable::new();
         let mut bm = ChessMove::default();
         
@@ -84,20 +84,23 @@ impl Engine {
 
             let (best, eval) = Self::best_move(&tree, &mut tt, i);
             bm = best;
+            tx.send(bm).unwrap();
 
             let node_count = tree.get_node_count();
 
-            println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), bm.to_string(), eval);
+            println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), tt.get_pv_string(&pos.make_move_new(bm)), eval);
         }
+
+        println!("bestmove {}", bm.to_string())
 
         // if let Some(entry) = tt.get(pos) {
         //     return Some(entry.mv)
         // }
-        if bm != ChessMove::default() {
-            return Some(bm)
-        }
+        // if bm != ChessMove::default() {
+        //     return Some(bm)
+        // }
 
-        None
+        // None
     }
 
     /// TODO: Thread intentionally panics, resolve smoother
@@ -107,8 +110,7 @@ impl Engine {
         self.rx = Some(rx);
         let depth = self.depth;
         self.handle = thread::spawn(move || {
-            let mv = Engine::calculate(&position, depth).unwrap();
-            tx.send(mv).unwrap();
+            Engine::calculate(tx, &position, depth);
         });
     }
 
@@ -130,4 +132,33 @@ fn engine_test() {
     eng.start(Board::default());
 
     eng.stop();
+}
+
+#[test]
+fn fen_test() {
+    use super::super::engine::alphabeta::alphabeta;
+    use std::str::FromStr;
+
+    let board = Board::from_str("2rqkbnr/pppbp1p1/5p1p/3Q4/2B1P3/8/PPP2PPP/RNB1K1NR b KQk - 3 7").unwrap();
+    println!("side to move: {}", match board.side_to_move() {
+        Color::Black => "black",
+        Color::White => "white"
+    });
+    let best = ChessMove::from_str("e7e6").unwrap();
+    let worst = ChessMove::from_str("h8h7").unwrap();
+
+    let mut tt1 = TranspositionTable::new();
+    let mut tt2 = TranspositionTable::new();
+    let bt = MoveTree::new(best, material_eval, &board);
+    let wt = MoveTree::new(worst, material_eval, &board);
+
+    // let engine = Engine::new(8);
+
+    let b = alphabeta(&bt, &mut tt1, 5);
+    let w = alphabeta(&wt, &mut tt2, 5);
+
+    println!("best move: {} cp", b);
+    println!("worst move: {} cp", w);
+
+    assert!(w > b); 
 }

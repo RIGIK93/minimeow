@@ -19,10 +19,12 @@ pub fn uci_set_position(game: &mut Game, args: &mut VecDeque<&str>) {
             }
 
             fen.push_str(fen_piece);
+            fen.push_str(" ");
         } else {
             break;
         }
     }
+    fen = fen.trim().into();
 
     while let Some(mv) = args.pop_front() {
         moves.push(ChessMove::from_str(mv).unwrap());
@@ -40,9 +42,9 @@ pub fn uci_set_position(game: &mut Game, args: &mut VecDeque<&str>) {
 }
 
 pub fn uci_go(game: &mut Game, engine: &mut Engine, args: &mut VecDeque<&str>) -> Option<ChessMove> {
-    if args.pop_front().unwrap_or_default() == "infinite" {
+    // if args.pop_front().unwrap_or_default() == "infinite" {
         engine.start(game.current_position());
-    }
+    // }
 
     None
 }

@@ -1,10 +1,10 @@
-use std::{hash::Hash, vec};
+use std::vec;
 
 use chess::{Board, ChessMove};
 
 use super::evaluation::CP;
 
-use nohash_hasher::IntMap;
+// use nohash_hasher::IntMap;
 
 /// Since alphabeta nodes can cut off, 
 /// sometimes we only know the range of values that eval might take at selected depth,
@@ -56,6 +56,27 @@ impl TranspositionTable {
         }
     }
 
+    pub fn get_pv(&self, startpos: &Board) -> Vec<ChessMove> {
+        let mut moves = Vec::new();
+
+        let mut board= *startpos;
+
+        while let Some(entry) = self.0.unsafe_get(&board) {
+            moves.push(entry.mv);
+            board = board.make_move_new(entry.mv);
+        }
+
+        moves
+    }
+
+    pub fn get_pv_string(&self, board: &Board) -> String {
+        self.get_pv(board)
+        .iter()
+        .fold(String::new(), |pv, mv| pv + mv.to_string().as_str() + " ")
+        .trim()
+        .to_string()
+    }
+
 }
 
 
@@ -86,6 +107,11 @@ impl ZobristMap {
         }
     }
 
+    /// Collision detection disabled
+    pub fn unsafe_get(&self, b: &Board) -> Option<&SearchTableEntry> {
+        self.arr[Self::index(b)].as_ref()
+    }
+
     pub fn set(&mut self, board: &Board, depth: u8, mv: ChessMove, eval: CP, flag: BoundType) {
         let hashed_position = board.get_hash();
         self.arr[Self::index(board)] = Some(SearchTableEntry { hashed_position, depth, mv, eval, flag});
@@ -106,18 +132,18 @@ fn hash_test() {
 }
 
 #[test]
-fn NoOverflowTest() {
+fn no_overflow_test() {
     use std::str::FromStr;
 
-    let (b1, b2) = (Board::default(), Board::default());
+    let (_b1, _b2) = (Board::default(), Board::default());
 
-    let b3 = b2.make_move_new(ChessMove::from_str("e2e4").unwrap());
+    let _b3 = _b2.make_move_new(ChessMove::from_str("e2e4").unwrap());
 
-    let mut map = ZobristMap::new();   
+    let mut _map = ZobristMap::new();   
 }
 
 #[test]
-fn ZobristMap_Test() {
+fn zobrist_map_test() {
     use std::str::FromStr;
 
     let (b1, b2) = (Board::default(), Board::default());
