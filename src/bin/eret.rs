@@ -69,9 +69,7 @@ fn main() {
 
     for puzzle in test_positions {
 
-        engine.start(puzzle.board.clone());
-
-        let best = engine.stop();
+        let best = engine.test_calculate(&puzzle.board);
 
         if best == puzzle.bm {
             color_print::cprintln!("{}, <green>PASS</green> {}", puzzle.id, start_time.elapsed().as_secs_f32());

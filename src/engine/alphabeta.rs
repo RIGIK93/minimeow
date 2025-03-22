@@ -53,6 +53,8 @@ pub fn alphabeta(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> CP 
    }
 }
 
+pub const MAX_NODES: u64 = 100_000_000;
+
 // alpha < beta
 pub fn alpha_beta_max(tree: &MoveTree, tt: &mut TranspositionTable, mut lower: CP, upper: CP, depth: u8) -> CP {
     let mut max = SMALL_EVAL;
@@ -88,7 +90,7 @@ pub fn alpha_beta_max(tree: &MoveTree, tt: &mut TranspositionTable, mut lower: C
         }
     }
 
-    if depth == 0 {
+    if depth == 0 || tree.get_node_count() > MAX_NODES {
         return tree.eval();
     }
 
@@ -159,7 +161,7 @@ pub fn alpha_beta_min(tree: &MoveTree, tt: &mut TranspositionTable, lower: CP, m
         }
     }
 
-    if depth == 0 {
+    if depth == 0 || tree.get_node_count() > MAX_NODES {
         return tree.eval();
     }
 

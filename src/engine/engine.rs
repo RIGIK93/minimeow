@@ -2,12 +2,13 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color};
 
-use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min}, evaluation::CP, transposition_table::TranspositionTable};
+use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min, MAX_NODES}, evaluation::CP, transposition_table::TranspositionTable};
 
 use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
 pub struct Engine {
     pub depth: u8,
+    // pub nodes: u64,
     // bv: Option<ChessMove>,
     pub handle: JoinHandle<()>,
     pub rx: Option<Receiver<ChessMove>>
@@ -19,6 +20,7 @@ impl Engine {
             depth: depth,
             handle: thread::spawn(|| {}),
             rx: None,
+            // nodes: 150000000 // hard cut off at 15 seconds for time considerations. Some positions go deep really fast, so a cutoff is needed. Since approximately 10,000,000 positions are searched per second, we add a cut of at 150 million
         }
     }
 
@@ -83,12 +85,16 @@ impl Engine {
             let calc_start = Instant::now();
 
             let (best, eval) = Self::best_move(&tree, &mut tt, i);
-            bm = best;
-            tx.send(bm).unwrap();
 
             let node_count = tree.get_node_count();
 
-            println!("info nodes {} nps {} time {} pv {} cp {}", node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), tt.get_pv_string(&pos.make_move_new(bm)), eval);
+            if node_count >= MAX_NODES {
+                break;
+            }
+
+            bm = best;
+            tx.send(bm).unwrap();
+            println!("info depth {} nodes {} nps {} time {} pv {} score cp {}", i, node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), bm.to_string(), eval);
         }
 
         println!("bestmove {}", bm.to_string())
@@ -101,6 +107,36 @@ impl Engine {
         // }
 
         // None
+    }
+
+    pub fn test_calculate(&self, pos: &Board) -> ChessMove {
+        let mut tt = TranspositionTable::new();
+        let mut bm = ChessMove::default();
+        
+        for i in 1..self.depth {
+            let tree: MoveTree = MoveTree::new_root_node( material_eval, pos.clone());
+            let calc_start = Instant::now();
+
+            let (best, eval) = Self::best_move(&tree, &mut tt, i);
+            bm = best;
+
+            let node_count = tree.get_node_count();
+
+            println!("info depth {} nodes {} nps {} time {} pv {} score cp {}", i, node_count, ((node_count as f64)/calc_start.elapsed().as_secs_f64()).round(), calc_start.elapsed().as_millis(), bm.to_string(), eval);
+        }
+
+        // println!("bestmove {}", bm.to_string())
+
+        // if let Some(entry) = tt.get(pos) {
+        //     return Some(entry.mv)
+        // }
+        // if bm != ChessMove::default() {
+        //     return Some(bm)
+        // }
+
+        // None
+
+        bm
     }
 
     /// TODO: Thread intentionally panics, resolve smoother

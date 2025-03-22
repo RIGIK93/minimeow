@@ -16,11 +16,9 @@ fn main() {
     while start_time.elapsed().as_secs() <= 15 {
         let mut engine = Engine::new(depth);
 
-        engine.start(pos.clone());
-
         start_time = Instant::now();
 
-        engine.stop();
+        engine.test_calculate(&pos);
 
         println!("Searched depth {}, took {} seconds", depth, start_time.elapsed().as_secs_f32());
 
