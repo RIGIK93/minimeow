@@ -2,7 +2,7 @@ use std::{sync::mpsc::{self, Receiver}, thread::{self, JoinHandle}, time::Instan
 
 use chess::{Board, ChessMove, Color};
 
-use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min, MAX_NODES}, evaluation::CP, transposition_table::TranspositionTable};
+use crate::engine::{alphabeta::{alpha_beta_max, alpha_beta_min, MAX_NODES}, evaluation::{piece_square_material_eval, CP}, transposition_table::TranspositionTable};
 
 use super::{evaluation::{material_eval, LARGE_EVAL, SMALL_EVAL}, move_tree::MoveTree};
 
@@ -81,7 +81,7 @@ impl Engine {
         let mut bm = ChessMove::default();
         
         for i in 1..depth {
-            let tree: MoveTree = MoveTree::new_root_node( material_eval, pos.clone());
+            let tree: MoveTree = MoveTree::new_root_node( piece_square_material_eval, pos.clone());
             let calc_start = Instant::now();
 
             let (best, eval) = Self::best_move(&tree, &mut tt, i);
@@ -114,7 +114,7 @@ impl Engine {
         let mut bm = ChessMove::default();
         
         for i in 1..self.depth {
-            let tree: MoveTree = MoveTree::new_root_node( material_eval, pos.clone());
+            let tree: MoveTree = MoveTree::new_root_node( piece_square_material_eval, pos.clone());
             let calc_start = Instant::now();
 
             let (best, eval) = Self::best_move(&tree, &mut tt, i);

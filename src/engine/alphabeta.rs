@@ -53,7 +53,7 @@ pub fn alphabeta(tree: &MoveTree, tt: &mut TranspositionTable, depth: u8) -> CP 
    }
 }
 
-pub const MAX_NODES: u64 = 100_000_000;
+pub const MAX_NODES: u64 = 80_000_000;
 
 // alpha < beta
 pub fn alpha_beta_max(tree: &MoveTree, tt: &mut TranspositionTable, mut lower: CP, upper: CP, depth: u8) -> CP {
